@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ordo"
+version = "0.1.0"
+description = "Порядок в файлах: правила «когда → если → то», автосортировка папок, журнал и откат"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["watchdog>=3.0"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+ordo = "ordo.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ordo*"]
+
+[tool.setuptools.package-data]
+ordo = ["presets/*.json"]
