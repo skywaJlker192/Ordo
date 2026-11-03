@@ -1,0 +1,86 @@
+{
+  "watch": [
+    { "folder": "~/Downloads", "settle_seconds": 3 }
+  ],
+  "rules": [
+    {
+      "name": "Исправить расширение",
+      "description": "Если содержимое не соответствует расширению (png с расширением .txt), исправляет расширение и продолжает сортировку",
+      "stop": false,
+      "conditions": [
+        { "field": "mismatch", "op": "equals", "value": true },
+        { "field": "type", "op": "in", "value": ["image", "video", "audio"] }
+      ],
+      "actions": [
+        { "do": "rename", "template": "{stem}.{real_ext}" }
+      ]
+    },
+    {
+      "name": "Скриншоты",
+      "conditions": [
+        { "field": "type", "op": "equals", "value": "image" },
+        { "field": "name", "op": "startswith", "value": ["screenshot", "screen shot", "снимок экрана", "скриншот"] }
+      ],
+      "actions": [
+        { "do": "move", "to": "Скриншоты/{year}-{month}" }
+      ]
+    },
+    {
+      "name": "Чеки и договоры",
+      "conditions": [
+        { "field": "type", "op": "equals", "value": "document" },
+        { "field": "name", "op": "regex", "value": "(чек|договор|счёт|счет|invoice|receipt|contract)" }
+      ],
+      "actions": [
+        { "do": "move", "to": "Документы/Важное" }
+      ]
+    },
+    {
+      "name": "Старые установщики в корзину",
+      "description": "Выключено по умолчанию. Включи (enabled: true), чтобы при уборке установщики старше 7 дней уходили в корзину Ordo (откат возможен)",
+      "enabled": false,
+      "conditions": [
+        { "field": "type", "op": "equals", "value": "installer" },
+        { "field": "age_days", "op": "gt", "value": 7 }
+      ],
+      "actions": [
+        { "do": "trash" }
+      ]
+    },
+    {
+      "name": "Изображения",
+      "conditions": [{ "field": "type", "op": "equals", "value": "image" }],
+      "actions": [{ "do": "move", "to": "Изображения/{year}" }]
+    },
+    {
+      "name": "Видео",
+      "conditions": [{ "field": "type", "op": "equals", "value": "video" }],
+      "actions": [{ "do": "move", "to": "Видео" }]
+    },
+    {
+      "name": "Музыка",
+      "conditions": [{ "field": "type", "op": "equals", "value": "audio" }],
+      "actions": [{ "do": "move", "to": "Музыка" }]
+    },
+    {
+      "name": "Документы",
+      "conditions": [{ "field": "type", "op": "equals", "value": "document" }],
+      "actions": [{ "do": "move", "to": "Документы" }]
+    },
+    {
+      "name": "Архивы",
+      "conditions": [{ "field": "type", "op": "equals", "value": "archive" }],
+      "actions": [{ "do": "move", "to": "Архивы" }]
+    },
+    {
+      "name": "Установщики",
+      "conditions": [{ "field": "type", "op": "equals", "value": "installer" }],
+      "actions": [{ "do": "move", "to": "Установщики" }]
+    },
+    {
+      "name": "Код и данные",
+      "conditions": [{ "field": "type", "op": "equals", "value": "code" }],
+      "actions": [{ "do": "move", "to": "Код" }]
+    }
+  ]
+}
