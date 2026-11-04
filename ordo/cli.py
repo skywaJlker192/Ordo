@@ -11,14 +11,13 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import __version__
+from .config_io import default_config
 from .engine import PlannedOp, apply_plan, plan_files, scan, undo_batch
 from .errors import ConfigError
 from .journal import Journal
 from .paths import config_path, db_path, expand, trash_dir
 from .rules import Config, WatchSpec, load_config
 from .watcher import Watcher
-
-PRESET = Path(__file__).parent / "presets" / "downloads.json"
 
 _VERBS = {"move": "переместить", "copy": "скопировать", "rename": "переименовать", "trash": "в корзину"}
 
@@ -86,7 +85,7 @@ def cmd_init(args) -> int:
     if target.exists() and not args.force:
         print(f"Конфиг уже есть: {target}\nЧтобы перезаписать, добавь --force.")
         return 1
-    data = json.loads(PRESET.read_text(encoding="utf-8"))
+    data = default_config()
     if args.folder:
         data["watch"][0]["folder"] = args.folder
     target.parent.mkdir(parents=True, exist_ok=True)

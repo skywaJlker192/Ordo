@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import sqlite3
 import time
+from collections import Counter
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS batches (
@@ -75,6 +77,28 @@ class Journal:
                GROUP BY b.id ORDER BY b.id DESC LIMIT ?""",
             (limit,),
         ).fetchall()
+
+    def recent_ops(self, limit: int = 8) -> List[sqlite3.Row]:
+        return self._db.execute(
+            """SELECT o.*, b.ts AS ts, b.undone AS undone
+               FROM ops o JOIN batches b ON b.id = o.batch_id
+               ORDER BY o.id DESC LIMIT ?""",
+            (limit,),
+        ).fetchall()
+
+    def daily_counts(self, days: int = 14) -> List[Tuple[date, int]]:
+        """Сколько операций сделано в каждый из последних дней (отменённые не считаем)."""
+        today = date.today()
+        start = today - timedelta(days=days - 1)
+        cutoff = datetime.combine(start, datetime.min.time()).timestamp()
+        rows = self._db.execute(
+            """SELECT b.ts AS ts FROM ops o JOIN batches b ON b.id = o.batch_id
+               WHERE b.undone = 0 AND b.ts >= ?""",
+            (cutoff,),
+        ).fetchall()
+        per_day = Counter(datetime.fromtimestamp(r["ts"]).date() for r in rows)
+        return [(start + timedelta(days=i), per_day.get(start + timedelta(days=i), 0))
+                for i in range(days)]
 
     def stats(self) -> dict:
         one = self._db.execute(

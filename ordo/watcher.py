@@ -4,12 +4,12 @@ from __future__ import annotations
 import threading
 import time
 from pathlib import Path
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from .engine import apply_plan, is_candidate_name, plan_files
+from .engine import ApplyResult, PlannedOp, apply_plan, is_candidate_name, plan_files
 from .journal import Journal
 from .rules import Config, WatchSpec
 
@@ -36,11 +36,14 @@ class _Handler(FileSystemEventHandler):
 
 class Watcher:
     def __init__(self, config: Config, journal: Journal, log: Callable[[str], None] = print,
-                 poll: float = 0.5):
+                 poll: float = 0.5,
+                 on_batch: Optional[Callable[[List[PlannedOp], ApplyResult], None]] = None):
         self.config = config
         self.journal = journal
         self.log = log
         self.poll = poll
+        self.on_batch = on_batch  # вызывается после каждой обработки файла (для уведомлений)
+        self._stop = threading.Event()
         self._folders: Dict[Path, WatchSpec] = {}
         self._pending: Dict[Path, Tuple[float, Sig]] = {}
         self._lock = threading.Lock()
@@ -55,6 +58,10 @@ class Watcher:
         if folder in self._folders and is_candidate_name(p):
             with self._lock:
                 self._pending[p] = (time.time(), None)
+
+    def stop(self) -> None:
+        """Попросить run() завершиться (можно вызывать из другого потока)."""
+        self._stop.set()
 
     def run(self) -> None:
         observer = Observer()
@@ -72,14 +79,14 @@ class Watcher:
         observer.start()
         self.log("Работаю. Остановить: Ctrl+C")
         try:
-            while True:
-                time.sleep(self.poll)
+            while not self._stop.wait(self.poll):
                 self._tick()
         except KeyboardInterrupt:
-            self.log("Остановлено.")
+            pass
         finally:
             observer.stop()
             observer.join()
+            self.log("Остановлено.")
 
     def _tick(self) -> None:
         now = time.time()
@@ -119,3 +126,8 @@ class Watcher:
             self.log(f"[{stamp}] {op.src.name} -> {op.dst}  [{op.rule}]")
         for op, err in result.errors:
             self.log(f"[{stamp}] ОШИБКА {op.src.name}: {err}")
+        if self.on_batch:
+            try:
+                self.on_batch(ops, result)
+            except Exception as e:  # ошибка в обработчике не должна ронять слежение
+                self.log(f"! обработчик события: {e}")
