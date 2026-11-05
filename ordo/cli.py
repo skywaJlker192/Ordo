@@ -12,7 +12,7 @@ from typing import List, Optional
 
 from . import __version__
 from .config_io import default_config
-from .engine import PlannedOp, apply_plan, plan_files, scan, undo_batch
+from .engine import PlannedOp, apply_plan, empty_trash, plan_files, scan, undo_batch
 from .errors import ConfigError
 from .journal import Journal
 from .paths import config_path, db_path, expand, trash_dir
@@ -191,18 +191,20 @@ def cmd_stats(args) -> int:
 
 
 def cmd_empty_trash(args) -> int:
-    root = trash_dir()
-    if not root.is_dir():
-        print("Корзина пуста.")
-        return 0
-    limit = time.time() - args.older_than * 86400
-    removed = 0
-    for day_dir in sorted(root.iterdir()):
-        if day_dir.is_dir() and day_dir.stat().st_mtime < limit:
-            removed += sum(1 for _ in day_dir.rglob("*") if _.is_file())
-            shutil.rmtree(day_dir, ignore_errors=True)
+    removed = empty_trash(args.older_than)
     print(f"Удалено навсегда: {plural(removed, 'файл', 'файла', 'файлов')} (старше {args.older_than} дн.)")
     return 0
+
+
+def cmd_gui(args) -> int:
+    try:
+        import PyQt5  # noqa: F401
+    except ImportError:
+        print("Для окна нужен PyQt5. Поставь: pip install PyQt5", file=sys.stderr)
+        return 1
+    from .gui.app import main as gui_main
+    gui_args = (["--minimized"] if args.minimized else []) + (["--config", args.config] if args.config else [])
+    return gui_main(gui_args)
 
 
 # ---------- вход ----------
@@ -236,6 +238,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("stats", help="статистика")
 
+    s = sub.add_parser("gui", help="открыть окно приложения (нужен PyQt5)")
+    s.add_argument("--minimized", action="store_true", help="запуститься свёрнутым в трей")
+
     s = sub.add_parser("empty-trash", help="очистить корзину Ordo")
     s.add_argument("--older-than", type=int, default=30, metavar="ДНЕЙ")
     return p
@@ -249,6 +254,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             pass
     args = build_parser().parse_args(argv)
     try:
+        if args.command == "gui":
+            return cmd_gui(args)
         if args.command == "init":
             return cmd_init(args)
         if args.command == "undo":

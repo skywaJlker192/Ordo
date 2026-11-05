@@ -11,10 +11,14 @@ requires-python = ">=3.9"
 dependencies = ["watchdog>=3.0"]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+gui = ["PyQt5>=5.15"]
+dev = ["pytest", "PyQt5>=5.15"]
 
 [project.scripts]
 ordo = "ordo.cli:main"
+
+[project.gui-scripts]
+ordo-gui = "ordo.gui.app:main"
 
 [tool.setuptools.packages.find]
 include = ["ordo*"]
