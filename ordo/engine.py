@@ -227,3 +227,17 @@ def undo_batch(journal: Journal, batch_id: Optional[int] = None) -> Optional[Und
             _remove_empty_dirs(dst.parent, stop_at=src.parent)
     journal.mark_undone(batch_id)
     return result
+
+
+def empty_trash(older_than_days: int) -> int:
+    """Удаляет навсегда папки корзины Ordo старше N дней. Возвращает число удалённых файлов."""
+    root = trash_dir()
+    if not root.is_dir():
+        return 0
+    limit = time.time() - older_than_days * 86400
+    removed = 0
+    for day_dir in sorted(root.iterdir()):
+        if day_dir.is_dir() and day_dir.stat().st_mtime < limit:
+            removed += sum(1 for f in day_dir.rglob("*") if f.is_file())
+            shutil.rmtree(day_dir, ignore_errors=True)
+    return removed
