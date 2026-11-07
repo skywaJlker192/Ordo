@@ -71,7 +71,59 @@ PLACEHOLDER_HELP = {
     "size_mb": "размер в МБ",
 }
 
-SOURCE_LABELS = {"run": "Ручной запуск", "watch": "Слежение", "sweep": "Первичная уборка"}
+SOURCE_LABELS = {"run": "Ручной запуск", "watch": "Слежение", "sweep": "Первичная уборка",
+                 "scenario": "Сценарий"}
+
+CLIP_MODE_LABELS = {
+    "trim": "убрать пробелы по краям",
+    "single_line": "склеить в одну строку",
+    "lower": "сделать строчными",
+    "upper": "сделать ПРОПИСНЫМИ",
+    "strip_utm": "убрать utm и трекинг из ссылок",
+}
+
+SCHEDULE_MODE_LABELS = {"every": "каждые N минут", "daily": "каждый день в", "weekdays": "по будням в"}
+
+
+def describe_trigger(t: Dict[str, Any]) -> str:
+    kind = t.get("type")
+    if kind == "hotkey":
+        return f"нажато {t.get('keys') or '…'}"
+    if kind == "schedule":
+        mode = t.get("mode")
+        if mode == "every":
+            return f"каждые {t.get('minutes', '?')} мин"
+        return f"{'по будням' if mode == 'weekdays' else 'каждый день'} в {t.get('at', '?')}"
+    if kind == "clipboard":
+        text = t.get("text", "")
+        if not text:
+            return "скопирован любой текст"
+        return f"скопировано: «{text}»" if t.get("match") != "regex" else f"скопировано по шаблону «{text}»"
+    if kind == "startup":
+        return "запущен Ordo"
+    return str(kind)
+
+
+def describe_step(a: Dict[str, Any]) -> str:
+    kind = a.get("do")
+    if kind == "sort":
+        return f"разобрать «{a['folder']}»" if a.get("folder") else "разобрать все папки"
+    if kind == "open":
+        return f"открыть «{a.get('target', '')}»"
+    if kind == "notify":
+        return f"уведомить «{a.get('text', '')}»"
+    if kind == "copy_text":
+        return f"скопировать «{a.get('text', '')}»"
+    if kind == "clip_transform":
+        return f"в буфере: {CLIP_MODE_LABELS.get(a.get('mode'), a.get('mode'))}"
+    return str(kind)
+
+
+def describe_scenario(sc: Dict[str, Any]) -> Tuple[str, str]:
+    """(«когда …», «то …») для карточки сценария."""
+    steps = [describe_step(a) for a in sc.get("actions", []) if isinstance(a, dict)]
+    return describe_trigger(sc.get("trigger") or {}), " → ".join(steps) or "действий пока нет"
+
 
 
 def ops_for(field: str) -> List[str]:

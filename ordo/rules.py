@@ -10,6 +10,7 @@ from . import templates
 from .conditions import Condition, FileContext
 from .errors import ConfigError
 from .paths import expand
+from .scenarios import Scenario, parse_scenario
 
 ACTION_KINDS = ("move", "copy", "rename", "trash")
 
@@ -46,6 +47,7 @@ class WatchSpec:
 class Config:
     watch: List[WatchSpec] = field(default_factory=list)
     rules: List[Rule] = field(default_factory=list)
+    scenarios: List[Scenario] = field(default_factory=list)
 
 
 def _parse_action(raw: Any, where: str) -> Action:
@@ -118,7 +120,8 @@ def parse_config(data: Any) -> Config:
             raise ConfigError(f"watch №{i}: нужно поле folder")
         watch.append(WatchSpec(expand(w["folder"]), float(w.get("settle_seconds", 3.0))))
     rules = [_parse_rule(r, i) for i, r in enumerate(data.get("rules") or [], 1)]
-    return Config(watch=watch, rules=rules)
+    scenarios = [parse_scenario(s, i) for i, s in enumerate(data.get("scenarios") or [], 1)]
+    return Config(watch=watch, rules=rules, scenarios=scenarios)
 
 
 def load_config(path: Path) -> Config:

@@ -29,6 +29,7 @@ def load_raw(path: Path) -> Dict[str, Any]:
         raise ConfigError(f"{path}: конфиг должен быть JSON-объектом")
     data.setdefault("watch", [])
     data.setdefault("rules", [])
+    data.setdefault("scenarios", [])
     return data
 
 
@@ -48,6 +49,15 @@ def ensure_config(path: Path) -> Dict[str, Any]:
     if not path.exists():
         save_raw(path, default_config())
     return load_raw(path)
+
+
+def validate_scenario(raw: Dict[str, Any]) -> Optional[str]:
+    """Текст ошибки или None, если сценарий корректен."""
+    try:
+        parse_config({"watch": [], "rules": [], "scenarios": [raw]})
+    except ConfigError as e:
+        return str(e)
+    return None
 
 
 def validate_rule(raw: Dict[str, Any]) -> Optional[str]:
