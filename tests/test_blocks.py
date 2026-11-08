@@ -170,7 +170,7 @@ def test_hotkey_press_runs_scenario_and_reload_releases_keys(state, monkeypatch)
           "actions": [{"do": "notify", "text": "привет"}]}
     eng, calls = _engine(state, monkeypatch, [sc])
     first = FakeListener.instances[-1]
-    assert first.keys == {1: "Ctrl+Alt+N"}
+    assert first.keys[1] == "Ctrl+Alt+N" and 1000 in first.keys  # 1000: радиальное меню
     first.on_press(1)
     assert calls == [("notify", "привет")]
     eng.reload()
@@ -181,7 +181,7 @@ def test_disabled_scenario_does_not_grab_hotkey(state, monkeypatch):
     sc = {"name": "N", "enabled": False, "trigger": {"type": "hotkey", "keys": "Ctrl+Alt+N"},
           "actions": [{"do": "notify", "text": "x"}]}
     _engine(state, monkeypatch, [sc])
-    assert FakeListener.instances == []
+    assert list(FakeListener.instances[-1].keys) == [1000]  # занята только клавиша радиального меню
 
 
 def test_schedule_fires_once_per_minute_window(state, monkeypatch):

@@ -10,6 +10,7 @@ from . import templates
 from .conditions import Condition, FileContext
 from .errors import ConfigError
 from .paths import expand
+from .radial import Radial, parse_radial
 from .scenarios import Scenario, parse_scenario
 
 ACTION_KINDS = ("move", "copy", "rename", "trash")
@@ -48,6 +49,7 @@ class Config:
     watch: List[WatchSpec] = field(default_factory=list)
     rules: List[Rule] = field(default_factory=list)
     scenarios: List[Scenario] = field(default_factory=list)
+    radial: Radial = field(default_factory=Radial)
 
 
 def _parse_action(raw: Any, where: str) -> Action:
@@ -121,7 +123,12 @@ def parse_config(data: Any) -> Config:
         watch.append(WatchSpec(expand(w["folder"]), float(w.get("settle_seconds", 3.0))))
     rules = [_parse_rule(r, i) for i, r in enumerate(data.get("rules") or [], 1)]
     scenarios = [parse_scenario(s, i) for i, s in enumerate(data.get("scenarios") or [], 1)]
-    return Config(watch=watch, rules=rules, scenarios=scenarios)
+    radial = parse_radial(data.get("radial"))
+    if radial.enabled and radial.items:
+        for sc in scenarios:
+            if sc.enabled and sc.trigger["type"] == "hotkey" and sc.trigger["keys"] == radial.hotkey:
+                raise ConfigError(f"сочетание {radial.hotkey} занято и радиальным меню, и сценарием «{sc.name}»")
+    return Config(watch=watch, rules=rules, scenarios=scenarios, radial=radial)
 
 
 def load_config(path: Path) -> Config:

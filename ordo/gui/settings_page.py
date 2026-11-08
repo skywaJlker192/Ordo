@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QHBoxLayout, QSpinBox, QVBoxLayout, QWidget
 from .. import __version__, autostart, paths
 from ..cli import plural
 from ..engine import empty_trash
+from .radial_settings import RadialCard
 from .rules_page import confirm, warn
 from .state import AppState
 from .widgets import Card, PageHeader, Toggle, button, divider, label
@@ -70,6 +71,7 @@ class SettingsPage(QWidget):
                 card.body.addWidget(divider())
             card.body.addWidget(opt)
         root.addWidget(card)
+        root.addWidget(RadialCard(state))
 
         # --- корзина ---
         trash = Card(spacing=8)

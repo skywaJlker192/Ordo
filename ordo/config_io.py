@@ -8,13 +8,16 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .errors import ConfigError
+from .radial import default_radial
 from .rules import parse_config
 
 PRESET = Path(__file__).parent / "presets" / "downloads.json"
 
 
 def default_config() -> Dict[str, Any]:
-    return json.loads(PRESET.read_text(encoding="utf-8"))
+    data = json.loads(PRESET.read_text(encoding="utf-8"))
+    data.setdefault("radial", default_radial())
+    return data
 
 
 def load_raw(path: Path) -> Dict[str, Any]:
@@ -30,6 +33,7 @@ def load_raw(path: Path) -> Dict[str, Any]:
     data.setdefault("watch", [])
     data.setdefault("rules", [])
     data.setdefault("scenarios", [])
+    data.setdefault("radial", default_radial())
     return data
 
 

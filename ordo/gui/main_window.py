@@ -4,14 +4,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable, List, Optional
 
-from PyQt5.QtCore import QByteArray, QSize, Qt, QTimer, pyqtSignal
+from PyQt5.QtCore import QByteArray, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt5.QtWidgets import (
     QApplication, QButtonGroup, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
     QScrollArea, QShortcut, QStackedWidget, QVBoxLayout, QWidget,
 )
-from PyQt5.QtGui import QKeySequence
+from PyQt5.QtGui import QDesktopServices, QKeySequence
 
-from .. import __version__
+from .. import __version__, radial
 from ..cli import plural
 from ..errors import ConfigError
 from . import icons
@@ -20,6 +20,7 @@ from .automation import AutomationEngine
 from .folders_page import FoldersPage
 from .history_page import HistoryPage
 from .preview import PreviewDialog
+from .radial_menu import RadialMenu
 from .rules_page import RulesPage, warn
 from .scenarios_page import ScenariosPage
 from .settings_page import SettingsPage
@@ -110,6 +111,10 @@ class MainWindow(QMainWindow):
         for p in self.pages:
             self.stack.addWidget(_scroll_page(p))
         row.addWidget(self.stack, 1)
+
+        self.radial_menu = RadialMenu()
+        self.radial_menu.chosen.connect(self.run_radial)
+        self.automation.radial_requested.connect(self.show_radial)
 
         self.toast = Toast(central)
         state.toast.connect(self.toast.show_message)
@@ -221,6 +226,52 @@ class MainWindow(QMainWindow):
         dlg = PreviewDialog(plans, self)
         if dlg.exec_() == QDialog.Accepted:
             self.state.apply(plans, "run")
+
+    # ---------- радиальное меню ----------
+
+    def radial_items(self) -> List[dict]:
+        """Пункты круга по настройкам; удалённые сценарии пропускаются."""
+        try:
+            cfg = self.state.parsed()
+        except ConfigError:
+            return []
+        names = {sc.name for sc in cfg.scenarios}
+        out = []
+        for it in cfg.radial.items:
+            kind, _, name = it.partition(":")
+            if kind == "builtin":
+                label_, icon_ = radial.BUILTINS[name]
+                if name == "watch":
+                    label_, icon_ = ("Пауза", "pause") if self.state.watching else ("Слежение", "play")
+                out.append({"id": it, "label": label_, "icon": icon_})
+            elif name in names:
+                out.append({"id": it, "label": name, "icon": "scenario"})
+        return out
+
+    def show_radial(self) -> None:
+        items = self.radial_items()
+        if items:
+            self.radial_menu.set_items(items)
+            self.radial_menu.popup()
+
+    def run_radial(self, item_id: str) -> None:
+        kind, _, name = item_id.partition(":")
+        if kind == "scenario":
+            for sc in self.state.scenarios:
+                if sc.get("name") == name:
+                    self.automation.run(sc, announce=True)
+                    return
+        elif name == "sort":
+            self.show_and_raise()
+            self.run_now()
+        elif name == "undo":
+            self.state.undo()
+        elif name == "watch":
+            self.state.toggle_watch()
+        elif name == "downloads":
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path.home() / "Downloads")))
+        elif name == "open":
+            self.show_and_raise()
 
     def show_and_raise(self) -> None:
         self.showNormal()

@@ -17,6 +17,7 @@ from ..scenarios import Env, RunResult, Scenario, is_due, match_clipboard, parse
 from .state import AppState
 
 TICK_MS = 15_000   # как часто проверяем расписание
+RADIAL_ID = 1000
 MUTE_SECONDS = 0.8  # после своего запуска не реагируем на буфер: сценарий сам его менял
 
 
@@ -24,6 +25,7 @@ class AutomationEngine(QObject):
     ran = pyqtSignal(str, bool, str)       # имя сценария, успех, текст ошибки
     _hotkey_pressed = pyqtSignal(int)      # приходит из потока Windows, в основной поток переезжает очередью
     _hotkey_failed = pyqtSignal(int, str)
+    radial_requested = pyqtSignal()        # нажата клавиша радиального меню
 
     listener_cls = hotkeys.HotkeyListener  # в тестах подменяется заглушкой
 
@@ -65,8 +67,10 @@ class AutomationEngine(QObject):
     def reload(self) -> None:
         """Перечитать сценарии из конфига и заново занять горячие клавиши."""
         self._stop_listener()
+        radial = None
         try:
-            self._scenarios = self.state.parsed().scenarios
+            cfg = self.state.parsed()
+            self._scenarios, radial = cfg.scenarios, cfg.radial
         except ConfigError:
             self._scenarios = []
         self._hotkeys = {}
@@ -79,9 +83,12 @@ class AutomationEngine(QObject):
                 self._hotkeys[len(self._hotkeys) + 1] = sc
             elif t["type"] == "schedule" and t["mode"] == "every":
                 self._last_run.setdefault(self._key(i, sc), now)  # первый запуск через N минут, не сразу
-        if self._hotkeys and hotkeys.supported():
+        bindings = {hid: sc.trigger["keys"] for hid, sc in self._hotkeys.items()}
+        if radial and radial.enabled and radial.items:
+            bindings[RADIAL_ID] = radial.hotkey
+        if bindings and hotkeys.supported():
             self._listener = self.listener_cls(
-                {hid: sc.trigger["keys"] for hid, sc in self._hotkeys.items()},
+                bindings,
                 self._hotkey_pressed.emit, self._hotkey_failed.emit)
             self._listener.start()
 
@@ -130,6 +137,9 @@ class AutomationEngine(QObject):
     # ---------- события ----------
 
     def _on_hotkey(self, hid: int) -> None:
+        if hid == RADIAL_ID:
+            self.radial_requested.emit()
+            return
         sc = self._hotkeys.get(hid)
         if sc:
             self.run(sc)

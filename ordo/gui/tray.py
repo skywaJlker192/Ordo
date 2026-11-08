@@ -22,12 +22,14 @@ class TrayController(QObject):
         self.act_open = QAction("Открыть Ordo", self.menu)
         self.act_toggle = QAction("", self.menu)
         self.act_run = QAction("Разобрать сейчас…", self.menu)
+        self.act_radial = QAction("Радиальное меню", self.menu)
         self.act_quit = QAction("Выход", self.menu)
+        self.act_radial.triggered.connect(window.show_radial)
         self.act_open.triggered.connect(window.show_and_raise)
         self.act_toggle.triggered.connect(state.toggle_watch)
         self.act_run.triggered.connect(self._run)
         self.act_quit.triggered.connect(window.quit_app)
-        for a in (self.act_open, None, self.act_toggle, self.act_run, None, self.act_quit):
+        for a in (self.act_open, None, self.act_toggle, self.act_run, self.act_radial, None, self.act_quit):
             self.menu.addSeparator() if a is None else self.menu.addAction(a)
         self.tray.setContextMenu(self.menu)
         self.tray.activated.connect(self._activated)
