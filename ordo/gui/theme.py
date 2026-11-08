@@ -199,6 +199,7 @@ def install_assets() -> dict:
         ("chev_down", "down", C["muted"]),
         ("chev_up", "up", C["muted"]),
         ("chev_right", "right", C["muted"]),
+        ("chev_down_white", "down", "#FFFFFF"),
         ("check", "check", "#FFFFFF"),
     ):
         path = folder / f"{key}.png"
@@ -207,8 +208,19 @@ def install_assets() -> dict:
     return out
 
 
+_ASSETS: dict = {}
+
+
+def asset(name: str) -> str:
+    """Путь к PNG-ресурсу (стрелки), созданному при старте темы."""
+    if not _ASSETS:
+        _ASSETS.update(install_assets())
+    return _ASSETS[name]
+
+
 def stylesheet() -> str:
-    return _QSS.substitute({**C, **install_assets()})
+    _ASSETS.update(install_assets())
+    return _QSS.substitute({**C, **_ASSETS})
 
 
 def apply(app: QApplication) -> None:

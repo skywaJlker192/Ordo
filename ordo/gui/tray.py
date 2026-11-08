@@ -34,6 +34,7 @@ class TrayController(QObject):
 
         state.watch_changed.connect(self._sync)
         state.files_moved.connect(self._notify)
+        state.notice.connect(self._on_notice)
         window.hidden_to_tray.connect(self._hint)
         self._sync(state.watching)
         self.tray.show()
@@ -55,6 +56,10 @@ class TrayController(QObject):
         if self.state.flag("notifications", True):
             self.tray.showMessage("Ordo", f"Разобрано: {plural(count, 'файл', 'файла', 'файлов')}",
                                   icons.app_icon(), 4000)
+
+    def _on_notice(self, text: str) -> None:
+        if not self.window.isVisible():  # окно открыто: хватит всплывашки внутри него
+            self.tray.showMessage("Ordo", text, icons.app_icon(), 4000)
 
     def _hint(self) -> None:
         if not self.state.flag("tray_hint_shown", False):

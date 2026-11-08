@@ -62,6 +62,7 @@ class AppState(QObject):
     watch_changed = pyqtSignal(bool)
     files_moved = pyqtSignal(int)        # сколько файлов разобрало слежение (для уведомления)
     toast = pyqtSignal(str, str)         # текст, вид: success / danger / info
+    notice = pyqtSignal(str)             # уведомление из сценария (трей покажет, если окно скрыто)
 
     def __init__(self, config_path: Optional[Path] = None, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -95,6 +96,10 @@ class AppState(QObject):
     def watch_folders(self) -> List[Dict[str, Any]]:
         return self.raw.get("watch", [])
 
+    @property
+    def scenarios(self) -> List[Dict[str, Any]]:
+        return self.raw.get("scenarios", [])
+
     def parsed(self) -> Config:
         return parse_config(self.raw)
 
@@ -115,6 +120,9 @@ class AppState(QObject):
 
     def set_rules(self, rules: List[Dict[str, Any]]) -> Optional[str]:
         return self.save({**self.raw, "rules": rules})
+
+    def set_scenarios(self, scenarios: List[Dict[str, Any]]) -> Optional[str]:
+        return self.save({**self.raw, "scenarios": scenarios})
 
     def set_watch_folders(self, folders: List[Dict[str, Any]]) -> Optional[str]:
         return self.save({**self.raw, "watch": folders})
