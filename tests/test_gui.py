@@ -69,7 +69,7 @@ def test_window_builds_and_every_page_opens(env, qapp):
     state, _dl, _ = env
     win = MainWindow(state, tray_available=False)
     win.show()
-    for i in range(5):
+    for i in range(len(win.pages)):
         win.go(i)
         qapp.processEvents()
         assert win.stack.currentIndex() == i and win.nav_buttons[i].isChecked()

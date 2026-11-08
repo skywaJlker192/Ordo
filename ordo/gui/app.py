@@ -87,6 +87,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if state.flag("autostart_watch", True):
         state.start_watch(silent=True)
+    window.automation.start()
     if not (args.minimized and tray_ok):
         window.show()
     return app.exec_()

@@ -16,16 +16,18 @@ from ..cli import plural
 from ..errors import ConfigError
 from . import icons
 from .dashboard import DashboardPage
+from .automation import AutomationEngine
 from .folders_page import FoldersPage
 from .history_page import HistoryPage
 from .preview import PreviewDialog
 from .rules_page import RulesPage, warn
+from .scenarios_page import ScenariosPage
 from .settings_page import SettingsPage
 from .state import AppState
 from .theme import C, set_prop
 from .widgets import Toggle, label
 
-NAV = [("home", "Главная"), ("rules", "Правила"), ("history", "Журнал"),
+NAV = [("home", "Главная"), ("rules", "Правила"), ("scenario", "Сценарии"), ("history", "Журнал"),
        ("folder", "Папки"), ("settings", "Настройки")]
 
 _TOAST_COLORS = {"success": C["success"], "danger": C["danger"], "info": C["accent_text"]}
@@ -99,10 +101,12 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.dashboard = DashboardPage(state, self.run_now)
         self.rules = RulesPage(state)
+        self.automation = AutomationEngine(state, self)
+        self.scenarios = ScenariosPage(state, self.automation)
         self.history = HistoryPage(state)
         self.folders = FoldersPage(state, self.run_now)
         self.settings_page = SettingsPage(state)
-        self.pages: List[QWidget] = [self.dashboard, self.rules, self.history, self.folders, self.settings_page]
+        self.pages: List[QWidget] = [self.dashboard, self.rules, self.scenarios, self.history, self.folders, self.settings_page]
         for p in self.pages:
             self.stack.addWidget(_scroll_page(p))
         row.addWidget(self.stack, 1)
@@ -226,6 +230,7 @@ class MainWindow(QMainWindow):
     def quit_app(self) -> None:
         self._quitting = True
         self.state.settings.setValue("geometry", self.saveGeometry())
+        self.automation.stop()
         self.state.shutdown()
         QApplication.quit()
 
