@@ -105,6 +105,8 @@ class SettingsPage(QWidget):
         r2 = QHBoxLayout()
         r2.setSpacing(8)
         r2.addWidget(button("Открыть папку данных", "default", "folder", lambda: self._open(paths.ordo_home())))
+        r2.addWidget(button("Добавить новые правила из пресета", "default", "plus", self._add_missing,
+                            "Допишет в конец недостающие правила (шрифты, дизайн, «Всё остальное»). Твои не тронет"))
         r2.addWidget(button("Вернуть правила из пресета", "danger", "rotate", self._reset))
         r2.addStretch(1)
         data.body.addLayout(r2)
@@ -133,6 +135,15 @@ class SettingsPage(QWidget):
             removed = empty_trash(days)
             self.state.toast.emit(f"Удалено навсегда: {removed}", "success")
             self.refresh_trash()
+
+    def _add_missing(self) -> None:
+        count, err = self.state.add_missing_preset_rules()
+        if err:
+            warn(self, err)
+        elif count:
+            self.state.toast.emit(f"Добавлено правил: {count}. Они в конце списка", "success")
+        else:
+            self.state.toast.emit("Все правила пресета у тебя уже есть", "info")
 
     def _reset(self) -> None:
         if confirm(self, "Вернуть правила из пресета",

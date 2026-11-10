@@ -227,3 +227,25 @@ def test_dangerous_open_target_is_refused(state, monkeypatch):
     eng, calls = _engine(state, monkeypatch, [sc])
     res = eng.run(state.scenarios[0])
     assert not res.ok and calls == []
+
+
+def test_failed_moves_are_explained_to_the_user(state):
+    got, toasts = [], []
+    state.problems.connect(got.append)
+    state.toast.connect(lambda t, k: toasts.append(t))
+    state._applied((2, ["song.mp3: [WinError 32] файл занят другим процессом"]))
+    assert got and "song.mp3" in got[0] and "открыт в другой программе" in got[0]
+    assert "с ошибками: 1" in toasts[-1]
+    got.clear()
+    state._applied((3, []))
+    assert got == []
+
+
+def test_add_missing_preset_rules_keeps_user_rules(state):
+    mine = {"name": "Моё", "conditions": [{"field": "ext", "op": "equals", "value": "x"}],
+            "actions": [{"do": "trash"}]}
+    assert state.set_rules([mine]) is None
+    added, err = state.add_missing_preset_rules()
+    names = [r["name"] for r in state.rules]
+    assert err is None and added > 5 and names[0] == "Моё" and names[-1] == "Всё остальное"
+    assert state.add_missing_preset_rules() == (0, None)

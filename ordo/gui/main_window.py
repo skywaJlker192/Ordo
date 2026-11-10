@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QDesktopServices, QKeySequence
 
-from .. import __version__, radial
+from .. import __version__, paths, radial
 from ..cli import plural
 from ..errors import ConfigError
 from . import icons
@@ -118,6 +118,7 @@ class MainWindow(QMainWindow):
 
         self.toast = Toast(central)
         state.toast.connect(self.toast.show_message)
+        state.problems.connect(lambda text: warn(self, text))
         state.watch_changed.connect(self._sync_watch)
         self._sync_watch(state.watching)
 
@@ -269,7 +270,7 @@ class MainWindow(QMainWindow):
         elif name == "watch":
             self.state.toggle_watch()
         elif name == "downloads":
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path.home() / "Downloads")))
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(paths.downloads_dir())))
         elif name == "open":
             self.show_and_raise()
 

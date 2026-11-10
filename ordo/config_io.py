@@ -71,3 +71,9 @@ def validate_rule(raw: Dict[str, Any]) -> Optional[str]:
     except ConfigError as e:
         return str(e)
     return None
+
+
+def missing_preset_rules(raw: Dict[str, Any]) -> list:
+    """Правила пресета, которых в конфиге нет по названию (появились в новых версиях Ordo)."""
+    have = {r.get("name") for r in raw.get("rules", []) if isinstance(r, dict)}
+    return [r for r in default_config()["rules"] if r["name"] not in have]

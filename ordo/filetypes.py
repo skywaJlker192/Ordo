@@ -6,18 +6,18 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 _EXT_KINDS = {
-    "image": "jpg jpeg jpe png gif webp bmp tif tiff svg ico heic heif avif",
-    "video": "mp4 mkv avi mov wmv flv webm m4v 3gp mpg mpeg",
-    "audio": "mp3 wav flac ogg m4a aac wma opus",
+    "image": "jpg jpeg jpe png gif webp bmp tif tiff svg ico heic heif avif jfif apng raw cr2 nef dng",
+    "video": "mp4 mkv avi mov wmv flv webm m4v 3gp mpg mpeg ts m2ts vob ogv",
+    "audio": "mp3 wav flac ogg m4a aac wma opus mid midi amr aiff ape",
     "document": (
         "pdf doc docx docm xls xlsx xlsm ppt pptx odt ods odp txt rtf csv md "
-        "epub fb2 djvu"
+        "epub fb2 djvu mobi pages numbers key odg tex log xlsb dotx xltx pptm"
     ),
-    "archive": "zip rar 7z tar gz tgz bz2 xz iso",
-    "installer": "exe msi apk dmg deb",
+    "archive": "zip rar 7z tar gz tgz bz2 xz iso cab zst img vhd",
+    "installer": "exe msi apk dmg deb rpm appx msix",
     "code": (
         "py js ts html css json xml c cpp h cs java go rs php sql sh bat ps1 "
-        "ipynb yml yaml toml"
+        "ipynb yml yaml toml ini cfg vue jsx tsx kt swift rb lua r"
     ),
 }
 EXT_TO_KIND = {e: k for k, exts in _EXT_KINDS.items() for e in exts.split()}

@@ -11,6 +11,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from .errors import ConfigError
 from .hotkeys import normalize
+from .paths import expand as expand_path
 
 TRIGGER_TYPES = ("hotkey", "schedule", "clipboard", "startup")
 ACTION_TYPES = ("sort", "open", "notify", "copy_text", "clip_transform")
@@ -200,7 +201,7 @@ def resolve_open_target(target: str) -> str:
         if scheme not in SAFE_SCHEMES:
             raise ValueError(f"схема «{scheme}:» запрещена, открываю только http, https и mailto")
         return t
-    path = Path(os.path.expandvars(os.path.expanduser(t)))
+    path = expand_path(t)
     if not path.exists():
         raise ValueError(f"не найдено: {t}")
     return str(path)

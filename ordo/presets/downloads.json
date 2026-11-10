@@ -81,6 +81,27 @@
       "name": "Код и данные",
       "conditions": [{ "field": "type", "op": "equals", "value": "code" }],
       "actions": [{ "do": "move", "to": "Код" }]
+    },
+    {
+      "name": "Шрифты",
+      "conditions": [{ "field": "ext", "op": "in", "value": ["ttf", "otf", "woff", "woff2", "fon"] }],
+      "actions": [{ "do": "move", "to": "Шрифты" }]
+    },
+    {
+      "name": "Дизайн",
+      "conditions": [{ "field": "ext", "op": "in", "value": ["psd", "ai", "fig", "xd", "sketch", "xcf", "kra", "blend", "dwg"] }],
+      "actions": [{ "do": "move", "to": "Дизайн" }]
+    },
+    {
+      "name": "Торренты",
+      "conditions": [{ "field": "ext", "op": "equals", "value": "torrent" }],
+      "actions": [{ "do": "move", "to": "Торренты" }]
+    },
+    {
+      "name": "Всё остальное",
+      "description": "Последняя сеть: всё, что не подошло ни под одно правило выше, уезжает в «Прочее». Выключи, если не нужно.",
+      "conditions": [{ "field": "type", "op": "equals", "value": "other" }],
+      "actions": [{ "do": "move", "to": "Прочее" }]
     }
   ]
 }

@@ -8,7 +8,7 @@ from PyQt5.QtCore import QObject, QSettings, QThread, QTimer, pyqtSignal
 
 from .. import paths
 from ..cli import human_size, plural
-from ..config_io import default_config, ensure_config, save_raw
+from ..config_io import default_config, ensure_config, missing_preset_rules, save_raw
 from ..engine import PlannedOp, apply_plan, plan_files, scan, undo_batch
 from ..errors import ConfigError
 from ..journal import Journal
@@ -63,6 +63,7 @@ class AppState(QObject):
     files_moved = pyqtSignal(int)        # сколько файлов разобрало слежение (для уведомления)
     toast = pyqtSignal(str, str)         # текст, вид: success / danger / info
     notice = pyqtSignal(str)             # уведомление из сценария (трей покажет, если окно скрыто)
+    problems = pyqtSignal(str)           # подробности, почему часть файлов не переехала
 
     def __init__(self, config_path: Optional[Path] = None, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -127,6 +128,14 @@ class AppState(QObject):
     def set_watch_folders(self, folders: List[Dict[str, Any]]) -> Optional[str]:
         return self.save({**self.raw, "watch": folders})
 
+    def add_missing_preset_rules(self) -> Tuple[int, Optional[str]]:
+        """Дописывает в конец недостающие правила пресета. Свои правила не трогает."""
+        extra = missing_preset_rules(self.raw)
+        if not extra:
+            return 0, None
+        err = self.save({**self.raw, "rules": list(self.rules) + extra})
+        return (0, err) if err else (len(extra), None)
+
     def reset_to_preset(self) -> Optional[str]:
         return self.save({**self.raw, "rules": default_config()["rules"]})
 
@@ -150,7 +159,7 @@ class AppState(QObject):
             return False
         worker = _WatchThread(cfg, self)
         worker.batch.connect(self._on_batch)
-        worker.finished.connect(lambda w=worker: self._on_watch_finished(w))
+        worker.finished.connect(self._finished_handler(worker))
         self._worker = worker
         worker.start()
         self.watch_changed.emit(True)
@@ -168,6 +177,10 @@ class AppState(QObject):
 
     def toggle_watch(self) -> None:
         self.stop_watch() if self.watching else self.start_watch()
+
+    def _finished_handler(self, worker: "_WatchThread") -> Callable[[], None]:
+        # замыкание без аргументов по умолчанию: PyQt иногда зовёт такие лямбды с лишним аргументом
+        return lambda: self._on_watch_finished(worker)
 
     def _on_watch_finished(self, worker: _WatchThread) -> None:
         if self._worker is worker:  # поток завершился сам, а не по нашей просьбе
@@ -204,15 +217,15 @@ class AppState(QObject):
         return plans
 
     def apply(self, plans: List[Plan], source: str = "run") -> None:
-        def work() -> Tuple[int, int]:
+        def work() -> Tuple[int, List[str]]:
             journal = Journal(paths.db_path())
-            done = errors = 0
+            done, errors = 0, []
             try:
                 for _folder, ops, _total in plans:
                     if ops:
                         res = apply_plan(ops, journal, source)
                         done += res.done
-                        errors += len(res.errors)
+                        errors += [f"{op.src.name}: {msg}" for op, msg in res.errors]
             finally:
                 journal.close()
             return done, errors
@@ -220,17 +233,23 @@ class AppState(QObject):
         task = _Task(work, self)
         task.done.connect(self._applied)
         task.failed.connect(lambda msg: self.toast.emit(f"Ошибка: {msg}", "danger"))
-        task.finished.connect(lambda t=task: self._tasks.discard(t))
+        task.finished.connect(lambda: self._tasks.discard(task))
         self._tasks.add(task)
         task.start()
 
-    def _applied(self, result: Tuple[int, int]) -> None:
+    def _applied(self, result: Tuple[int, List[str]]) -> None:
         done, errors = result
         text = f"Готово: {plural(done, 'операция', 'операции', 'операций')}"
         if errors:
-            text += f", с ошибками: {errors}"
+            text += f", с ошибками: {len(errors)}"
         self.toast.emit(text, "danger" if errors and not done else "success")
         self.journal_changed.emit()
+        if errors:  # чаще всего файл занят другой программой: скажем, какой именно
+            shown = "\n".join(f"• {e}" for e in errors[:8])
+            more = f"\n…и ещё {len(errors) - 8}" if len(errors) > 8 else ""
+            self.problems.emit(f"Не удалось переместить: {plural(len(errors), 'файл', 'файла', 'файлов')}.\n"
+                               f"Обычно так бывает, когда файл открыт в другой программе (плеер, браузер, "
+                               f"архиватор). Закрой её и нажми «Разобрать сейчас» ещё раз.\n\n{shown}{more}")
 
     def undo(self, batch_id: Optional[int] = None) -> None:
         result = undo_batch(self.journal, batch_id)

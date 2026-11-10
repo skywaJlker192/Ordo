@@ -201,7 +201,7 @@ class ActionRow(QFrame):
 
         self.kind.currentIndexChanged.connect(self._on_kind)
         self.param.textChanged.connect(self._emit)
-        self.param.focused.connect(self.param_focused.emit)
+        self.param.focused.connect(self._on_param_focus)
         self.browse.clicked.connect(self._browse)
         self.remove_btn.clicked.connect(lambda: self.removed.emit(self))
 
@@ -222,6 +222,9 @@ class ActionRow(QFrame):
     def _on_kind(self, *_a) -> None:
         self._sync()
         self._emit()
+
+    def _on_param_focus(self, widget=None) -> None:
+        self.param_focused.emit(widget if widget is not None else self.param)
 
     def _browse(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Куда класть файлы")
@@ -371,11 +374,15 @@ class RuleEditor(QDialog):
         row.deleteLater()
         self._refresh()
 
+    def _remember_param(self, widget=None) -> None:
+        if widget is not None:
+            self._last_param = widget
+
     def _add_action(self, act: Optional[Dict[str, Any]]) -> None:
         row = ActionRow(act)
         row.changed.connect(self._refresh)
         row.removed.connect(self._remove_action)
-        row.param_focused.connect(lambda w: setattr(self, "_last_param", w))
+        row.param_focused.connect(self._remember_param)
         self._act_rows.append(row)
         self.act_box.addWidget(row)
         self._refresh()
